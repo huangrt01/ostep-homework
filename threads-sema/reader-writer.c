@@ -3,27 +3,48 @@
 #include <unistd.h>
 #include "common_threads.h"
 
-//
-// Your code goes in the structure and functions below
-//
 
 typedef struct __rwlock_t {
+    sem_t lock;
+    sem_t writelock;
+    sem_t S;
+    int readers;
 } rwlock_t;
 
 
 void rwlock_init(rwlock_t *rw) {
+    sem_init(&rw->lock,1);
+    sem_init(&rw->writelock,1);
+    sem_init(&rw->S,1);
+    rw->readers=0;
 }
 
 void rwlock_acquire_readlock(rwlock_t *rw) {
+    sem_wait(&rw->S);
+    sem_post(&rw->S);
+    sem_wait(&rw->lock);
+    rw->readers++;
+    if(rw->readers==1)
+        sem_wait(&rw->writelock);
+    sem_post(&rw->lock);
 }
 
 void rwlock_release_readlock(rwlock_t *rw) {
+    sem_wait(&rw->lock);
+    rw->readers--;
+    if(rw->readers==0)
+        sem_post(&rw->writelock);
+    sem_post(&rw->lock);
 }
 
 void rwlock_acquire_writelock(rwlock_t *rw) {
+    sem_wait(&rw->S);
+    sem_wait(&rw->writelock);
 }
 
 void rwlock_release_writelock(rwlock_t *rw) {
+    sem_post(&rw->S);
+    sem_post(&rw->writelock);
 }
 
 //
